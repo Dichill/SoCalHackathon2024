@@ -11,9 +11,46 @@ import {
   ServiceContext,
 } from "@dainprotocol/service-sdk";
 
-import { analyzeImageBuffer, getImage } from "./services/cain"
+import { analyzeImageBuffer, getImage, findFromImage } from "./services/cain"
 
+const openTabConfig: ToolConfig = {
+  id: "open-tab",
+  name: "Open Tab",
+  description: "Opens a new tab for the user",
+  input: z.object({
+    question: z.string().describe("Question to answer if the user wants to open a new tab"),
+  }),
+  output: z.object({
+    answer: z.string().describe("Answer the user's question.")
+  }),
+  pricing: { pricePerUse: 0, currency: "USD" },
+  handler: async ({ question }, agentInfo) => {
+    try {
+      const axios = require('axios');
 
+      // Make the POST request
+      const response = await axios.post('http://127.0.0.1:3000/open', {
+        question: question
+      });
+
+      return {
+        text: `Success, opened a new tab for you.`,
+        data: {
+          answer: "Success, opened a new tab for you."
+        },
+        ui: {},
+      }
+
+    } catch (error) {
+      console.error('Error in open-tab handler:', error);
+      return {
+        text: "Failed to do task",
+        data: { answer: "Cain Software is probably not open. Try again." },
+        ui: {}
+      };
+    }
+  }
+};
 
 const analyzeScreenConfig: ToolConfig = {
   id: "analyze-screen",
@@ -29,7 +66,7 @@ const analyzeScreenConfig: ToolConfig = {
   handler: async ({ imageUrl, question }, agentInfo) => {
     try {
 
-
+      await axios.get('http://127.0.0.1:3000/analyze_screen')
       const screen = await getImage();
       const answer = await analyzeImageBuffer(screen);
 
@@ -64,6 +101,129 @@ const analyzeScreenConfig: ToolConfig = {
   }
 };
 
+const navigatePageConfig : ToolConfig = {
+  id: "navigate-page",
+  name: "Navigate Page",
+  description: "allows the user to go forward from a page, go backward, undo or redo.",
+  input: z.object({
+    question: z.string().describe("Question to go next page, or go back."),
+  }),
+  output: z.object({
+    answer: z.string().describe("Does what the user does")
+  }),
+  pricing: { pricePerUse: 0, currency: "USD" },
+  handler: async ({ question }, agentInfo) => {
+    let zed;
+
+    try {
+      if (question.includes("forward", "next", "redo")) {
+        zed = "forward"
+      } else {
+        zed = "backward"
+      }
+      await axios.post(`http://127.0.0.1:3000/navigate_page`, {
+        zed: zed,
+      })
+
+      return {
+        text: "Success!",
+        data: { answer: "There you go!" },
+        ui: {}
+      };
+
+    } catch (error) {
+      console.error('Error in scrolling up or down', error);
+      return {
+        text: "Failed scroll for user",
+        data: { answer: "An error occurred while scrolling." },
+        ui: {}
+      };
+    }
+  }
+}
+
+const scrollPageConfig : ToolConfig = {
+  id: "scroll-page",
+  name: "Scroll Page",
+  description: "allows the user to scroll up or down.",
+  input: z.object({
+    question: z.string().describe("Question to scroll up or down if user says so"),
+  }),
+  output: z.object({
+    answer: z.string().describe("Does what the user does")
+  }),
+  pricing: { pricePerUse: 0, currency: "USD" },
+  handler: async ({ question }, agentInfo) => {
+    let direction;
+    let amount = 100;
+
+    try {
+      if (question.includes("up")) {
+        direction = "up"
+      } else {
+        direction = "down"
+      }
+      await axios.post(`http://127.0.0.1:3000/scroll`, {
+        direction: direction,
+        amount: amount
+      })
+      console.log(question)
+      console.log(direction)
+
+      return {
+        text: "Success!",
+        data: { answer: "There you go!" },
+        ui: {}
+      };
+
+    } catch (error) {
+      console.error('Error in scrolling up or down', error);
+      return {
+        text: "Failed scroll for user",
+        data: { answer: "An error occurred while scrolling." },
+        ui: {}
+      };
+    }
+  }
+}
+
+const clickOnRequestConfig: ToolConfig = {
+  id: "click-request",
+  name: "Click Request",
+  description: "(DONT EXECUTE THIS IF USER SAYS ANYTHING ABOUT GOING BACK A PAGE OR GOING FORWARD) if user requests to click a certain text, it will emulate a click to the specified button or text.",
+  input: z.object({
+    question: z.string().describe("Question to answer about what the user will click e.g. keywords like home and etc."),
+  }),
+  output: z.object({
+    answer: z.string().describe("Answer the user's question.")
+  }),
+  pricing: { pricePerUse: 0, currency: "USD" },
+  handler: async ({ question }, agentInfo) => {
+    try {
+      await axios.get('http://127.0.0.1:3000/analyze_screen')
+      const screen = await getImage();
+      const answer = await findFromImage(screen, question);
+      console.log(answer)
+
+      await axios.post('http://127.0.0.1:3000/click_request?q=' + answer)
+
+      return {
+        text: "Success",
+        data: { answer: "navigated it for you :)" },
+        ui: {}
+      };
+      
+    } catch (error) {
+      console.error('Error in analyze-screen handler:', error);
+      return {
+        text: "Failed to analyze image",
+        data: { answer: "An error occurred while analyzing the image." },
+        ui: {}
+      };
+    }
+  }
+};
+
 const dainService = defineDAINService({
   metadata: {
     title: "CAIN Service",
@@ -77,9 +237,9 @@ const dainService = defineDAINService({
   identity: {
     apiKey: process.env.DAIN_API_KEY,
   },
-  tools: [analyzeScreenConfig],
+  tools: [analyzeScreenConfig, openTabConfig, clickOnRequestConfig, scrollPageConfig, navigatePageConfig],
 });
 
 dainService.startNode({ port: 2022 }).then(() => {
-  console.log("Weather DAIN Service is running on port 2022");
+  console.log("Cain Service is running on port 2022");
 });
