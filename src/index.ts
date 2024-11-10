@@ -52,6 +52,82 @@ const openTabConfig: ToolConfig = {
   }
 };
 
+const writeStringConfig: ToolConfig = {
+  id: "write-string",
+  name: "Write Text",
+  description: "If user asks to write something down or to type something. This will be executed.",
+  input: z.object({
+    question: z.string().describe("Make it specific. Question as to what the user would like to type."),
+  }),
+  output: z.object({
+    answer: z.string().describe("Do what the user says")
+  }),
+  pricing: { pricePerUse: 0, currency: "USD" },
+  handler: async ({ question }, agentInfo) => {
+    try {
+      const axios = require('axios');
+
+      // Make the POST request
+      const response = await axios.post('http://127.0.0.1:3000/write_text?q=' + question);
+
+      return {
+        text: `Success, wrote it down for you.`,
+        data: {
+          answer: "Success, wrote your text for you."
+        },
+        ui: {},
+      }
+
+    } catch (error) {
+      console.error('Error in write-string handler:', error);
+      return {
+        text: "Failed to do task",
+        data: { answer: "Cain Software is probably not open. Try again." },
+        ui: {}
+      };
+    }
+  }
+};
+
+const pressKeysConfig: ToolConfig = {
+  id: "press-key",
+  name: "Emulate Pressing Keys",
+  description: "If user asks to press a certain key like: 'once writing it down, can you go to the website etc.'",
+  input: z.object({
+    question: z.string().describe("Make it specific e.g. Enter as I am using PyAutoGui. Question as to what the user would like to press on their keys"),
+  }),
+  output: z.object({
+    answer: z.string().describe("Do what the user says")
+  }),
+  pricing: { pricePerUse: 0, currency: "USD" },
+  handler: async ({ question }, agentInfo) => {
+    try {
+      const axios = require('axios');
+
+      // Make the POST request
+      const response = await axios.post('http://127.0.0.1:3000/press_key?q=' + question);
+
+      return {
+        text: `Understood`,
+        data: {
+          answer: "Got it"
+        },
+        ui: {},
+      }
+
+    } catch (error) {
+      console.error('Error in write-string handler:', error);
+      return {
+        text: "Failed to do task",
+        data: { answer: "Cain Software is probably not open. Try again." },
+        ui: {}
+      };
+    }
+  }
+};
+
+
+
 const analyzeScreenConfig: ToolConfig = {
   id: "analyze-screen",
   name: "Analyze Screen",
@@ -237,7 +313,9 @@ const dainService = defineDAINService({
   identity: {
     apiKey: process.env.DAIN_API_KEY,
   },
-  tools: [analyzeScreenConfig, openTabConfig, clickOnRequestConfig, scrollPageConfig, navigatePageConfig],
+  tools: [analyzeScreenConfig, openTabConfig, clickOnRequestConfig, scrollPageConfig, navigatePageConfig, writeStringConfig,
+    pressKeysConfig
+  ],
 });
 
 dainService.startNode({ port: 2022 }).then(() => {

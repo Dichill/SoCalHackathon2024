@@ -15,6 +15,18 @@ img_path = "../temp/image.png"
 reader = easyocr.Reader(["en"])
 
 
+def smooth_scroll(amount, duration=1):
+    steps = 25  # Number of small scrolls to perform
+    step_duration = duration / steps  # Time between each scroll step
+
+    # Ensure step_amount has the correct sign (positive for up, negative for down)
+    step_amount = amount // steps if amount != 0 else 1
+
+    for _ in range(steps):
+        pyautogui.scroll(step_amount)
+        time.sleep(step_duration)
+
+
 def levenshtein_similarity(sent1, sent2):
     distance = Levenshtein.distance(sent1, sent2)
     max_len = max(len(sent1), len(sent2))
@@ -58,8 +70,6 @@ def click_word(
     # Capture the screenshot
     screenshot = pyautogui.screenshot()
     image_rgb = np.array(screenshot)
-
-    # Initialize EasyOCR reader
 
     # Perform OCR
     results = reader.readtext(image_rgb)
@@ -129,6 +139,22 @@ def shotScreen():
 @app.route("/analyze_screen", methods=["GET"])
 def AnalyzeScreen():
     shotScreen()
+
+    return jsonify(isSuccess=True)
+
+
+@app.route("/write_text", methods=["POST"])
+def writeText():
+    q = request.args.get("q")
+    pyautogui.write(q)
+
+    return jsonify(isSuccess=True)
+
+
+@app.route("/press_key", methods=["POST"])
+def pressKey():
+    q = request.args.get("q")
+    pyautogui.press(q)
 
     return jsonify(isSuccess=True)
 
@@ -211,6 +237,8 @@ def scroll_page():
         direction = data.get("direction")
         amount = data.get("amount", 100)
 
+        amount = 50
+
         if direction not in ["up", "down"]:
             return (
                 jsonify(
@@ -230,9 +258,9 @@ def scroll_page():
 
         # Perform the scroll
         if direction == "up":
-            pyautogui.scroll(amount)
+            smooth_scroll(50, duration=1)
         else:
-            pyautogui.scroll(-amount)
+            smooth_scroll(-50, duration=1)
 
         return (
             jsonify({"isSuccess": True, "direction": direction, "amount": amount}),
